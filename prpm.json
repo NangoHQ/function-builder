@@ -1,0 +1,141 @@
+{
+  "name": "function-builder",
+  "version": "1.0.0",
+  "description": "Toolkit for building Nango integration actions and syncs with AI assistance - includes shared patterns skill, action builder skill, sync builder skill, and TDD workflow command",
+  "license": "MIT",
+  "organization": "Nango",
+  "repository": "https://github.com/NangoHQ/function-builder",
+  "packages": [
+    {
+      "name": "integration-patterns-skill",
+      "version": "1.0.1",
+      "description": "Shared patterns for Nango actions and syncs - working directory verification, inline schemas, parameter naming, type safety, and index.ts registration. Private dependency skill invoked by action-builder-skill and sync-builder-skill.",
+      "format": "claude",
+      "subtype": "skill",
+      "tags": [
+        "nango",
+        "patterns",
+        "schemas",
+        "type-safety",
+        "best-practices",
+        "dependency"
+      ],
+      "files": [
+        "integration-patterns-skill.md"
+      ],
+      "private": true
+    },
+    {
+      "name": "sync-builder-skill",
+      "version": "1.2.1",
+      "description": "Use when creating Nango syncs for continuous data synchronization - provides patterns for pagination, batch saving, deletion detection, and incremental updates",
+      "format": "claude",
+      "subtype": "skill",
+      "tags": [
+        "nango",
+        "syncs",
+        "pagination",
+        "data-synchronization",
+        "best-practices",
+        "typescript"
+      ],
+      "files": [
+        "sync-builder-skill.md"
+      ],
+      "conversion": {
+        "cursor": {
+          "globs": ["nango-integrations/**/syncs/*.ts"]
+        }
+      }
+    },
+    {
+      "name": "action-builder-skill",
+      "version": "1.2.1",
+      "description": "Use when creating or refactoring Nango integration actions to be thin API wrappers - provides patterns for minimal transformation logic, direct proxy calls, and standardized structure",
+      "format": "claude",
+      "subtype": "skill",
+      "tags": [
+        "nango",
+        "integrations",
+        "api-wrapper",
+        "best-practices",
+        "code-patterns",
+        "typescript"
+      ],
+      "files": [
+        "action-builder-skill.md"
+      ],
+      "private": false,
+      "conversion": {
+        "cursor": {
+          "globs": ["nango-integrations/**/actions/*.ts"]
+        }
+      }
+    },
+    {
+      "name": "build-function",
+      "version": "2.0.0",
+      "description": "Complete TDD workflow for building Nango functions (actions or syncs) - accepts optional action|sync argument, generates code, creates tests, and validates",
+      "format": "claude",
+      "subtype": "slash-command",
+      "tags": [
+        "nango",
+        "workflow",
+        "tdd",
+        "actions",
+        "syncs",
+        "automation",
+        "testing",
+        "integration"
+      ],
+      "files": [
+        "build-function.md"
+      ]
+    }
+  ],
+  "collections": [
+    {
+      "id": "nango-function-builder",
+      "name": "Nango Function Builder",
+      "description": "Complete toolkit for building Nango integration actions with AI assistance - includes nango patterns, TDD workflow to create end to end functions in Nango",
+      "version": "1.0.1",
+      "category": "development",
+      "tags": [
+        "nango",
+        "integrations",
+        "action-builder",
+        "sync-builder",
+        "tdd",
+        "development",
+        "claude-code"
+      ],
+      "icon": "🔧",
+      "packages": [
+        {
+          "packageId": "@nango/integration-patterns-skill",
+          "version": "latest",
+          "required": true,
+          "reason": "Shared patterns dependency - required by action-builder-skill and sync-builder-skill"
+        },
+        {
+          "packageId": "@nango/sync-builder-skill",
+          "version": "latest",
+          "required": true,
+          "reason": "Core skill for building continuous data syncs with pagination, batch saving, and deletion detection"
+        },
+        {
+          "packageId": "@nango/action-builder-skill",
+          "version": "latest",
+          "required": true,
+          "reason": "Core skill for building thin API wrapper actions following Nango best practices"
+        },
+        {
+          "packageId": "@nango/build-function",
+          "version": "latest",
+          "required": true,
+          "reason": "Complete TDD workflow command for building and validating a Nango function end-to-end"
+        }
+      ]
+    }
+  ]
+}
