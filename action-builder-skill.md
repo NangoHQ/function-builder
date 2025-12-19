@@ -65,7 +65,7 @@ Actions are **thin API wrappers** using `createAction()`. This skill covers acti
 
 ```typescript
 import { z } from 'zod';
-import { createAction } from 'nango';
+import { createAction, ActionError } from 'nango';
 import type { ProxyConfiguration } from 'nango';
 
 // Schemas defined inline (see integration-patterns-skill)
@@ -97,6 +97,14 @@ const action = createAction({
 
         const response = await nango.post(config);  // or .get, .patch, .delete
 
+        // Handle expected failures with ActionError
+        if (!response.data.results || response.data.results.length === 0) {
+            throw new ActionError({
+                type: 'not_found',
+                message: 'Resource not found'
+            });
+        }
+
         return {
             // Transform response to match OutputSchema
             // Use ?? null for optional fields (see integration-patterns-skill)
@@ -127,6 +135,138 @@ export default action;
 data: {
     required_field: input.required,
     ...(input.optional && { optional_field: input.optional })
+}
+```
+
+## Error Handling: "Not Found" and Expected Failures
+
+**Use `ActionError` for expected failures like "not found" scenarios.**
+
+When a resource is not found or an expected failure occurs, use `ActionError` to return a structured error response. This prevents 500 errors and provides clear, actionable information to API consumers.
+
+### Pattern: ActionError for "Not Found"
+
+```typescript
+import { createAction, ActionError } from 'nango';
+import type { ProxyConfiguration } from 'nango';
+
+// Output schema - no need for nullable fields
+const GetCompanyByDomainOutput = z.object({
+    id: z.string(),
+    name: z.union([z.string(), z.null()]),
+    domain: z.union([z.string(), z.null()]),
+    created_at: z.union([z.string(), z.null()])
+});
+
+// In exec function
+exec: async (nango, input): Promise<z.infer<typeof GetCompanyByDomainOutput>> => {
+    const config: ProxyConfiguration = {
+        // https://developers.hubspot.com/docs/api/crm/search
+        endpoint: 'crm/v3/objects/companies/search',
+        data: {
+            filterGroups: [...],
+            properties: ['name', 'domain', 'createdate']
+        },
+        retries: 3
+    };
+
+    const response = await nango.post(config);
+
+    // Use ActionError for not found scenarios
+    if (!response.data.results || response.data.results.length === 0) {
+        throw new ActionError({
+            type: 'not_found',
+            message: `No company found with domain: ${input.domain}`,
+            domain: input.domain
+        });
+    }
+
+    const company = response.data.results[0];
+    return {
+        id: company.id,
+        name: company.properties.name ?? null,
+        domain: company.properties.domain ?? null,
+        created_at: company.properties.createdate ?? null
+    };
+}
+```
+
+**Response format when not found:**
+```json
+{
+  "error_type": "action_script_failure",
+  "payload": {
+    "type": "not_found",
+    "message": "No company found with domain: example.com",
+    "domain": "example.com"
+  }
+}
+```
+
+### When to Use ActionError
+
+Use `ActionError` for expected failures where you want to provide structured error information:
+- **Not found scenarios**: Search returns no results, resource doesn't exist
+- **Validation failures**: Business logic validation (e.g., "Cannot delete last admin")
+- **Rate limiting**: API rate limit reached (with retry info)
+- **Partial failures**: Some items succeeded, some failed (with details)
+
+```typescript
+// Example: Rate limit
+if (response.status === 429) {
+    throw new ActionError({
+        type: 'rate_limited',
+        message: 'API rate limit exceeded',
+        retry_after: response.headers['retry-after']
+    });
+}
+
+// Example: Validation failure
+if (input.quantity > maxQuantity) {
+    throw new ActionError({
+        type: 'validation_error',
+        message: `Quantity ${input.quantity} exceeds maximum ${maxQuantity}`,
+        max_allowed: maxQuantity
+    });
+}
+```
+
+### When to Use Standard Errors
+
+Use standard `throw new Error()` for unexpected failures:
+- Authentication/authorization issues
+- Network/timeout errors (though Nango handles retries)
+- Unexpected API response structures
+- Programming errors
+
+```typescript
+// Unexpected API structure
+if (!response.data || typeof response.data.results === 'undefined') {
+    throw new Error('Unexpected API response structure');
+}
+```
+
+### ActionError vs Nullable Fields
+
+**Prefer ActionError over nullable fields:**
+
+❌ **Don't use nullable pattern:**
+```typescript
+// Unclear if null means "not found" or "no data"
+if (!found) {
+    return { id: null, name: null, email: null };
+}
+```
+
+✅ **Do use ActionError:**
+```typescript
+// Clear, structured error information
+if (!found) {
+    throw new ActionError({
+        type: 'not_found',
+        message: 'User not found',
+        user_id: input.user_id
+    });
 }
 ```
 
@@ -323,6 +463,12 @@ If WebFetch returns incomplete API docs (JavaScript-rendered content):
 - [ ] API doc link comment above endpoint
 - [ ] Uses `input` directly (no `zodValidateInput`)
 
+**Error Handling:**
+- [ ] Import `ActionError` from 'nango' for expected failures
+- [ ] "Not found" scenarios use `ActionError` with descriptive payload
+- [ ] ActionError includes `type` field for error categorization
+- [ ] Standard errors (`throw new Error()`) only for unexpected failures
+
 **Pagination (list actions only):**
 - [ ] Input uses `cursor: z.string().optional()`
 - [ ] Output uses `next_cursor: z.union([z.string(), z.null()])`
@@ -333,6 +479,8 @@ If WebFetch returns incomplete API docs (JavaScript-rendered content):
 
 | Mistake | Why It Fails | Fix |
 |---------|--------------|-----|
+| Using standard `Error` for "not found" | Unclear error type, no structure | Use `ActionError` with type/message/context |
+| Not importing `ActionError` | Cannot use structured errors | Add to imports: `import { createAction, ActionError }` |
 | Missing `retries: 3` | Flaky network calls fail | Add to ProxyConfiguration |
 | Wrong return type | Type mismatch errors | Use `Promise<z.infer<typeof OutputSchema>>` |
 | Using `zodValidateInput` | Returns undefined, already validated | Use `input` directly |
