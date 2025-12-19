@@ -50,7 +50,7 @@
     },
     {
       "name": "action-builder-skill",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "description": "Use when creating or refactoring Nango integration actions to be thin API wrappers - provides patterns for minimal transformation logic, direct proxy calls, and standardized structure",
       "format": "claude",
       "subtype": "skill",
@@ -98,7 +98,7 @@
       "id": "nango-function-builder",
       "name": "Nango Function Builder",
       "description": "Complete toolkit for building Nango integration actions with AI assistance - includes nango patterns, TDD workflow to create end to end functions in Nango",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "category": "development",
       "tags": [
         "nango",
